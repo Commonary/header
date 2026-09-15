@@ -12,13 +12,12 @@ wss.on('connection', (ws, req) => {
     ws.close();
     return;
   }
-  
+
   if (!connectedUsers.has(userId)) {
     connectedUsers.set(userId, new Set());
   }
   connectedUsers.get(userId).add(ws);
 
-  // Notify network user is active
   broadcastPresence(userId, true);
 
   ws.on('close', () => {
@@ -42,4 +41,4 @@ function broadcastPresence(userId, isOnline) {
   });
 }
 
-console.log(`header backend running on port ${port}`);
+console.log(`Server started on port ${port}`);
