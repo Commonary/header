@@ -13,20 +13,33 @@ wss.on('connection', (ws, req) => {
     return;
   }
   
-  connectedUsers.set(userId, ws);
+  if (!connectedUsers.has(userId)) {
+    connectedUsers.set(userId, new Set());
+  }
+  connectedUsers.get(userId).add(ws);
+
+  // Notify network user is active
   broadcastPresence(userId, true);
 
   ws.on('close', () => {
-    connectedUsers.delete(userId);
-    broadcastPresence(userId, false);
+    const userSockets = connectedUsers.get(userId);
+    if (userSockets) {
+      userSockets.delete(ws);
+      if (userSockets.size === 0) {
+        connectedUsers.delete(userId);
+        broadcastPresence(userId, false);
+      }
+    }
   });
 });
 
 function broadcastPresence(userId, isOnline) {
-  const payload = JSON.stringify({ type: 'PRESENCE_CHANGE', userId, isOnline });
+  const payload = JSON.stringify({ type: 'STATUS_UPDATE', userId, isOnline });
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(payload);
     }
   });
 }
+
+console.log(`header backend running on port ${port}`);
