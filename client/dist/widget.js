@@ -1,7 +1,6 @@
 (function () {
   const currentScript = document.currentScript;
-  const userId = currentScript.getAttribute('data-user-id');
-
+  const userId = currentScript ? currentScript.getAttribute('data-user-id') : null;
   const BACKEND_WS_URL = 'wss://header-backend.onrender.com';
 
   if (!userId) {
@@ -59,27 +58,27 @@
     }
   }
 
-  customElements.define('header-nav', HeaderBar);
+  if (!customElements.get('header-nav')) {
+    customElements.define('header-nav', HeaderBar);
+  }
 
-  const navInstance = document.createElement('header-nav');
-  document.body.prepend(navInstance);
-  document.body.style.paddingTop = '42px'; // Prevent top bar overlap
+  function initWidget() {
+    // Prevent duplicate injections if initialized twice
+    if (document.querySelector('header-nav')) return;
 
-  let socket;
-  function connect() {
-    socket = new WebSocket(`${BACKEND_WS_URL}?userId=${encodeURIComponent(userId)}`);
+    const navInstance = document.createElement('header-nav');
+    document.body.prepend(navInstance);
+    document.body.style.paddingTop = '42px';
 
+    const socket = new WebSocket(`${BACKEND_WS_URL}?userId=${encodeURIComponent(userId)}`);
     socket.onopen = () => navInstance.setStatus(true);
-    socket.onclose = () => {
-      navInstance.setStatus(false);
-      setTimeout(connect, 5000);
-    };
+    socket.onclose = () => navInstance.setStatus(false);
     socket.onerror = () => navInstance.setStatus(false);
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', connect);
+    document.addEventListener('DOMContentLoaded', initWidget);
   } else {
-    connect();
+    initWidget();
   }
 })();
