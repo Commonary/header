@@ -1,1 +1,12 @@
-
+{
+  "name": "header-backend",
+  "version": "1.0.0",
+  "description": "Backend presence server for header widget",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
