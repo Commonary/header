@@ -18,7 +18,7 @@ wss.on('connection', (ws, req) => {
   }
   connectedUsers.get(userId).add(ws);
 
-  broadcastPresence(userId, true);
+  broadcastOnlineList();
 
   ws.on('close', () => {
     const userSockets = connectedUsers.get(userId);
@@ -26,14 +26,19 @@ wss.on('connection', (ws, req) => {
       userSockets.delete(ws);
       if (userSockets.size === 0) {
         connectedUsers.delete(userId);
-        broadcastPresence(userId, false);
       }
     }
+    broadcastOnlineList();
   });
 });
 
-function broadcastPresence(userId, isOnline) {
-  const payload = JSON.stringify({ type: 'STATUS_UPDATE', userId, isOnline });
+function broadcastOnlineList() {
+  const onlineUserIds = Array.from(connectedUsers.keys());
+  const payload = JSON.stringify({
+    type: 'ONLINE_USERS_LIST',
+    users: onlineUserIds
+  });
+
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(payload);
@@ -41,4 +46,4 @@ function broadcastPresence(userId, isOnline) {
   });
 }
 
-console.log(`Server started on port ${port}`);
+console.log(`Server running on port ${port}`);
