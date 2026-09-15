@@ -1,11 +1,15 @@
 (function () {
   const currentScript = document.currentScript;
   const userId = currentScript.getAttribute('data-user-id');
-  const BACKEND_WS_URL = 'wss://your-widget-backend.onrender.com';
 
-  if (!userId) return;
+  const BACKEND_WS_URL = 'wss://header-backend.onrender.com';
 
-  class MySpaceTopBar extends HTMLElement {
+  if (!userId) {
+    console.error('[header] Missing required "data-user-id" attribute on script tag.');
+    return;
+  }
+
+  class HeaderBar extends HTMLElement {
     constructor() {
       super();
       this.attachShadow({ mode: 'open' });
@@ -16,36 +20,38 @@
             top: 0;
             left: 0;
             width: 100%;
-            height: 40px;
-            background: #003366;
+            height: 42px;
+            background: #111111;
             color: #ffffff;
-            font-family: Arial, sans-serif;
+            font-family: system-ui, -apple-system, sans-serif;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 15px;
+            padding: 0 16px;
             box-sizing: border-box;
-            z-index: 999999;
+            z-index: 9999999;
+            border-bottom: 2px solid #333333;
           }
-          .status { display: flex; align-items: center; gap: 8px; }
-          .dot { width: 10px; height: 10px; border-radius: 50%; background: #888; }
-          .dot.online { background: #00ff00; }
-          .dot.offline { background: #ff0000; }
+          .brand { font-weight: bold; font-size: 14px; letter-spacing: 0.5px; }
+          .user-badge { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+          .dot { width: 8px; height: 8px; border-radius: 50%; background: #666; transition: background 0.3s; }
+          .dot.online { background: #00ff66; box-shadow: 0 0 8px #00ff66; }
+          .dot.offline { background: #ff3333; }
         </style>
-        <div><strong>MySpace Network</strong></div>
-        <div class="status">
+        <div class="brand">header</div>
+        <div class="user-badge">
           <div id="status-dot" class="dot offline"></div>
-          <span id="status-text">Offline</span>
+          <span id="status-text">Connecting...</span>
         </div>
       `;
     }
 
-    setOnlineStatus(isOnline) {
+    setStatus(isOnline) {
       const dot = this.shadowRoot.getElementById('status-dot');
       const text = this.shadowRoot.getElementById('status-text');
       if (isOnline) {
         dot.className = 'dot online';
-        text.textContent = 'Online';
+        text.textContent = `Online (${userId})`;
       } else {
         dot.className = 'dot offline';
         text.textContent = 'Offline';
@@ -53,14 +59,27 @@
     }
   }
 
-  customElements.define('myspace-topbar', MySpaceTopBar);
+  customElements.define('header-nav', HeaderBar);
 
-  const topBarElement = document.createElement('myspace-topbar');
-  document.body.prepend(topBarElement);
+  const navInstance = document.createElement('header-nav');
+  document.body.prepend(navInstance);
+  document.body.style.paddingTop = '42px'; // Prevent top bar overlap
 
-  const socket = new WebSocket(`${BACKEND_WS_URL}?userId=${userId}`);
+  let socket;
+  function connect() {
+    socket = new WebSocket(`${BACKEND_WS_URL}?userId=${encodeURIComponent(userId)}`);
 
-  socket.onopen = () => topBarElement.setOnlineStatus(true);
-  socket.onclose = () => topBarElement.setOnlineStatus(false);
-  socket.onerror = () => topBarElement.setOnlineStatus(false);
+    socket.onopen = () => navInstance.setStatus(true);
+    socket.onclose = () => {
+      navInstance.setStatus(false);
+      setTimeout(connect, 5000);
+    };
+    socket.onerror = () => navInstance.setStatus(false);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', connect);
+  } else {
+    connect();
+  }
 })();
